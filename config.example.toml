@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────
+#  vision —— 事件触发双摄守夜相机
+#  改完这个文件重启服务生效： sudo systemctl restart vision
+# ─────────────────────────────────────────────────────────────
+
+[camera]
+width = 1920          # 录制分辨率（Pi 5 无硬件编码器，1080p 是甜点）
+height = 1080
+fps = 15
+quality = 85          # 预录 JPEG 质量（预览清楚点，代价是内存多吃几 MB）
+flip = "rot180"       # 相机装反了就 rot180；可选 none / hflip / vflip
+# 日/夜配置：auto 按光照自动切；day / night 强制（网页上也能点）
+profile = "auto"
+# 滞回区间：低于 18 lux 切夜间，高于 40 lux 切回白天，避免临界点反复横跳
+switch_lux = [18.0, 40.0]
+# 切换后至少停留多少秒（防止在临界点反复横跳）
+switch_dwell = 30.0
+
+[day]
+# 装上 IR-cut 滤镜时用这套。装好后一定要重跑：
+#   python3 awb_cal.py
+# 把测出来的增益填进来。留空 [] = 用相机自动白平衡（装了滤镜通常够准）
+awb_gains = []
+ev = 0.0
+mono = false          # 装滤镜后颜色是真实色，别转黑白
+
+[night]
+# 拆掉滤镜时用这套。NoIR 无滤镜时彩色是假的，所以强制黑白。
+awb_gains = [1.226, 1.927]   # 2026-10-20 实测迭代值
+ev = -0.3
+mono = true
+
+[motion]
+enabled = true
+threshold = 4.0       # 平均灰度差（0-255），越小越敏感
+pixel_delta = 14      # 单像素算作"变化"的阈值
+area_ratio = 0.012    # 变化像素占比（原来是 0.004，抬手就触发；调大压误报）
+persist = 3           # 连续多少帧命中才真正触发（原来是 2）
+cooldown = 20.0       # 一次触发后的静默秒数（原来是 8）
+warmup = 5.0          # 启动后忽略的秒数（等自动曝光稳住）
+bg_alpha = 0.03       # 背景模型更新速度
+downsample = 8        # 运动检测的降采样倍数
+
+[preroll]
+seconds = 4.0         # ★ 事发前留几秒（这是整套东西的灵魂）
+fps = 8
+size = [1280, 720]    # 预览/预录尺寸；要更清楚就 1920x1080（吃内存）
+
+[record]
+seconds = 10.0        # 事发后录几秒
+fps = 15
+crf = 23
+preset = "ultrafast"  # 2GB 内存的 Pi 5 别用 medium/slow
+
+[events]
+dir = "events"
+max_age_hours = 24.0  # ★ 不留档：超过这么多小时的录像自动删除
+max_count = 60        # 同时最多留多少个事件
+max_gb = 40.0         # 或者总共不超过多少 GB
+
+[server]
+host = "0.0.0.0"
+port = 8080
+token = ""            # 填了就要求 /trigger 带 ?token=xxx
+# 直播推流帧率。MJPEG 带宽 = 单帧字节 × 帧率：
+#   1280x720 一帧约 68KB
+#   5fps ≈ 340KB/s ≈ 2.7Mbps   （默认，够看）
+#   2fps ≈ 136KB/s ≈ 1.1Mbps   （远程看推荐）
+#   8fps ≈ 530KB/s ≈ 4.2Mbps   （局域网内最流畅）
+stream_fps = 5.0
+
+# 第二机位：XIAO ESP32S3 Sense，走 USB 串口（插在 Pi 的 USB 口上）
+[secondary]
+enabled = true
+mode = "serial"                    # serial = USB 串口；http = 走 WiFi 的 MJPEG
+port = "/dev/ttyACM0"
+baud = 115200
+fps = 10
+ring_seconds = 4.0
+lamp_ms = 6000                     # 事件开始时点亮补光灯多久（0 = 不控灯）
+url = ""                           # mode="http" 时才用
+lamp_url = ""                      # 外接灯控的 HTTP 地址，留空则不用
+
+# 声音触发（ESP32 的 PDM 麦克风）。阈值要按你的房间实测：
+#   插上板子后在 Pi 上跑：python3 -c "import serial;s=serial.Serial('/dev/ttyACM0');s.write(b'SND\n');print(s.readline());print(s.readline())"
+#   安静时应该是个位数~几十，说话几百，拍手几千。把阈值设在"安静"和"说话"之间。
+[sound]
+enabled = false                    # 宿舍太吵，先关掉；要用时改 true 并填好 threshold
+threshold = 800                    # RMS 电平阈值（0 = 关闭声音触发）
+cooldown = 15.0                    # 触发后静默多少秒

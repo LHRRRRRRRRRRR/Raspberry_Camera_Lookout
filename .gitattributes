@@ -1,0 +1,9 @@
+# 强制 LF：Windows 上编辑过的 .sh 带到 Linux 会报 "bad interpreter: /bin/bash^M"
+* text=auto eol=lf
+
+# 二进制文件不要做行尾转换
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.mp4 binary
+*.ico binary

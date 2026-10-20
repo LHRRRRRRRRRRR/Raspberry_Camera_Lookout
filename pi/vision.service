@@ -1,0 +1,20 @@
+[Unit]
+Description=lookout - event triggered camera
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# ↓ 这两个值按你的实际情况改：用户名 / 代码所在目录
+User=pi
+WorkingDirectory=/home/pi/lookout
+ExecStart=/usr/bin/python3 main.py
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
