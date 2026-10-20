@@ -303,15 +303,6 @@ journalctl -u vision -f
 - 当前只做运动/声音触发和重要度排序，不识别具体目标，也没有人脸或车牌识别。
 - 网页接口是 HTTP，`token` 只做简单访问控制，不是加密。不要把 8080 端口直接暴露到公网；远程访问请走 VPN 或带 TLS 的反向代理。
 
-## 安全建议
-
-- 不要把 `config.toml`、`events/`、`runtime.json`、`.ssh/` 或任何私钥提交到仓库。
-- **检查提交作者邮箱**：`git log --format="%ae"` 会显示真实邮箱，默认会被公开。
-  用 GitHub 的匿名地址提交，并在 Settings → Emails 勾上
-  *Keep my email addresses private* 和 *Block command line pushes that expose my email*。
-- 在不可信网络中运行时，设置 `server.token`，并限制防火墙来源。
-- 如果私钥或 token 曾经进入 Git 历史，应立即撤销并轮换，而不是只删除当前文件。
-
 ## 许可
 
 MIT
